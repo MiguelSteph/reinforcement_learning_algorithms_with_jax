@@ -7,7 +7,9 @@ import tensorflow as tf
 import datetime
 import orbax.checkpoint as ocp
 from tqdm.auto import tqdm
-
+from agent import Agent
+from dqn_types import TrainerConfig, BufferState, DQNState, Transition, TransitionBatch, PyTree
+from replay_buffer import ReplayBuffer
 
 class AgentTrainer():
     def __init__(
@@ -47,10 +49,10 @@ class AgentTrainer():
         return buffer_state
 
 
-    def play_full_episode(self, env: Any, dqn_state: DQNState) -> int:
+    def play_full_episode(self, env: Any, dqn_state: DQNState) -> float:
         rewards = []
-        obs, _ = env.reset(options={"randomize": True})
-        for t in range(self.cfg.max_t_per_episode):
+        obs, _ = env.reset()
+        for _ in range(self.cfg.max_t_per_episode):
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
             action = self.agent.select_action(dqn_state, obs, sample_rng_key)
             obs, reward, terminated, truncated, *_ = env.step(int(action))
@@ -74,8 +76,8 @@ class AgentTrainer():
         for episode in tqdm(range(1, self.cfg.n_episodes + 1)):
             # Reset the environment
             print(f"Episode {episode} started")
-            obs, _ = env.reset(options={"randomize": True})
-            for t in range(self.cfg.max_t_per_episode):
+            obs, _ = env.reset()
+            for _ in range(self.cfg.max_t_per_episode):
                 self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
                 action = self.agent.select_action(dqn_state, obs, sample_rng_key)
                 next_obs, reward, terminated, truncated, *_ = env.step(int(action))
@@ -86,9 +88,8 @@ class AgentTrainer():
                 if done:
                     break
 
-            if episode > 0 and episode % self.cfg.check_reward_every == 0:
+            if episode % self.cfg.check_reward_every == 0:
                 full_episode_discounted_reward = self.play_full_episode(env, dqn_state)
-                full_episode_discounted_reward
                 print(f"Reward checking: Episode: {episode}, Total discounted reward: {full_episode_discounted_reward}")
                 with self.reward_summary_writer.as_default():
                     tf.summary.scalar('reward', full_episode_discounted_reward, step=episode)
@@ -111,7 +112,10 @@ class AgentTrainer():
         new_dqn_state = dqn_state
         if self.t_update == 0 and is_buffer_ready:
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
-            sample_batch = self.buffer.sample(buffer_state, sample_rng_key, trainer_config.batch_size)
+            indices = jax.random.choice(
+                sample_rng_key, int(buffer_state.size), shape=(self.cfg.batch_size,), replace=False
+            )
+            sample_batch = self.buffer.sample(buffer_state, indices)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
             with self.train_summary_writer.as_default():
                 tf.summary.scalar('loss', metrics['loss'], step=dqn_state.step)
@@ -125,7 +129,6 @@ class AgentTrainer():
 
     @partial(jax.jit,
              static_argnums=(0,),
-             # donate_argnames=("dqn_state",)
             )
     def train_step(self, dqn_state: DQNState, batch: TransitionBatch) -> Tuple[DQNState, Dict]:
         dropout_rng_key = jax.random.fold_in(key=dqn_state.rng_key, data=dqn_state.step)
@@ -136,7 +139,6 @@ class AgentTrainer():
             dqn_state.target_params,
             dqn_state.apply_fn,
             batch,
-            training=True,
             dropout_rng_key=dropout_rng_key,
         )
         new_state = dqn_state.apply_gradients(grads=grads)
@@ -148,25 +150,24 @@ class AgentTrainer():
               target_params: PyTree,
               apply_fn: Any,
               batch: TransitionBatch,
-              training: bool,
               dropout_rng_key: jax.Array | None) -> PyTree:
-        # Q(s, a) from online network — batched via vmap
+
         def q_online(x):
-            return dqn_state.apply_fn(
-                dqn_state.params, x, train=True,
+            return apply_fn(
+                online_params, x, train=True,
                 rngs={'dropout': dropout_rng_key},
             )
 
         def q_target(x):
-            return dqn_state.apply_fn(dqn_state.target_params, x, train=False)
+            return apply_fn(target_params, x, train=False)
 
         with jax.named_scope("computing_q_values"):
-            q_values = jax.vmap(q_online)(batch.obs) # (B, n_actions)
+            q_values = q_online(batch.obs) # (B, n_actions)
             # Gather Q(s, a) for the taken action
-            q_taken = q_values[:, batch.action]  # (B,)
+            q_taken = q_values[jnp.arange(q_values.shape[0]), batch.action]  # (B,)
 
         with jax.named_scope("computing_q_target"):
-            q_next = jax.vmap(q_target)(batch.next_obs) # (B, n_actions)
+            q_next = q_target(batch.next_obs) # (B, n_actions)
             # TD target: r + gamma * max_a Q_target(s', a)  — masked by done
             q_next_max = jnp.max(q_next, axis=-1) # (B,)
             done = batch.done.astype(jnp.int32)

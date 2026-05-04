@@ -3,7 +3,7 @@ from jax import numpy as jnp
 from typing import Tuple
 from functools import partial
 import optax
-from types import DQNConfig, DQNState
+from dqn_types import DQNConfig, DQNState
 from model import QNetwork
 
 
@@ -28,7 +28,7 @@ class Agent():
         """Initialise network parameters and optimizer state."""
         net_key, rng_key = jax.random.split(rng_key, 2)
  
-        dummy_obs = jnp.zeros(obs_shape, dtype=jnp.float32)
+        dummy_obs = jnp.zeros((1, *obs_shape), dtype=jnp.float32)
         online_params = self.network.init(net_key, dummy_obs)
         target_params = jax.tree.map(lambda x: x.copy(), online_params)
 
@@ -48,8 +48,8 @@ class Agent():
         obs: jnp.ndarray,
         key: jax.Array,
     ) -> jnp.int32:
-        q_values = dqn_state.apply_fn(dqn_state.params, jnp.expand_dims(obs, 0), train=False)
+        q_values = dqn_state.apply_fn(dqn_state.params, jnp.expand_dims(obs, 0), train=False)[0]
         adjusted_q_values = q_values / self.temperature
-        probs = nn.softmax(adjusted_q_values)
-        action = jax.random.choice(key, q_values.shape[-1], p = probs)
+        probs = jax.nn.softmax(adjusted_q_values)
+        action = jax.random.choice(key, q_values.shape[-1], p=probs)
         return action.astype(jnp.int32)

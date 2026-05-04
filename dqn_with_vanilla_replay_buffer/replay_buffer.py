@@ -1,7 +1,7 @@
 import jax
 from jax import numpy as jnp
 from functools import partial
-from types import BufferState, Transition, TransitionBatch
+from dqn_types import BufferState, Transition, TransitionBatch
 
 
 class ReplayBuffer:
@@ -15,10 +15,10 @@ class ReplayBuffer:
     def init(self) -> BufferState:
         """Return an empty BufferState."""
         return BufferState(
-            obs = jnp.zeros((self.capacity, *self.obs_dim), dtype = jnp.float32),
+            obs = jnp.zeros((self.capacity, *self.obs_dim), dtype = jnp.uint8),
             action = jnp.zeros((self.capacity,), dtype =jnp.int32),
             reward = jnp.zeros((self.capacity,), dtype = jnp.float32),
-            next_obs = jnp.zeros((self.capacity, *self.obs_dim), dtype = jnp.float32),
+            next_obs = jnp.zeros((self.capacity, *self.obs_dim), dtype = jnp.uint8),
             done = jnp.zeros((self.capacity,), dtype = jnp.bool_),
             cursor = jnp.int32(0),
             size = jnp.int32(0),
@@ -40,25 +40,16 @@ class ReplayBuffer:
         )
 
 
-    @partial(jax.jit, static_argnums=(0, 3))
-    def sample(
-        self,
-        state: BufferState,
-        key: jax.Array,
-        batch_size: int,
-    ) -> TransitionBatch:
-        """Sample `batch_size` transitions uniformly at random."""
-        indices = jax.random.choice(
-            key, self.capacity, shape=(batch_size,), replace=False
-        )
-        batch = TransitionBatch(
-            obs = state.obs[indices],
-            action = state.action[indices],
-            reward = state.reward[indices],
+    @partial(jax.jit, static_argnums=(0,))
+    def sample(self, state: BufferState, indices: jnp.ndarray) -> TransitionBatch:
+        """Retrieve transitions at the given indices."""
+        return TransitionBatch(
+            obs      = state.obs[indices],
+            action   = state.action[indices],
+            reward   = state.reward[indices],
             next_obs = state.next_obs[indices],
-            done = state.done[indices],
+            done     = state.done[indices],
         )
-        return batch
 
 
     def is_ready(self, state: BufferState, min_size: int) -> bool:

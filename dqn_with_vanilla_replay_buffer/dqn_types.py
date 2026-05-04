@@ -1,4 +1,5 @@
-from typing import NamedTuple, Any, Tuple
+import jax
+from typing import NamedTuple, Any
 from jax import numpy as jnp
 from flax.training import train_state
 from configs import get_configs
@@ -25,13 +26,13 @@ class TransitionBatch(NamedTuple):
 
 class BufferState(NamedTuple):
     """All mutable state carried by the buffer (fully JAX-compatible)."""
-    obs:        jnp.ndarray   # (capacity, *obs_dim)
+    obs:        jnp.ndarray   # (capacity, *obs_dim) uint8
     action:     jnp.ndarray   # (capacity,)
     reward:     jnp.ndarray   # (capacity,)
-    next_obs:   jnp.ndarray   # (capacity, *obs_dim)
+    next_obs:   jnp.ndarray   # (capacity, *obs_dim) uint8
     done:       jnp.ndarray   # (capacity,)
-    cursor:     jnp.ndarray   # int32 — next write position
-    size:       jnp.ndarray   # int32 — current valid entries
+    cursor:     jnp.int32   # int32 — next write position
+    size:       jnp.int32   # int32 — current valid entries
 
 
 class DQNConfig(NamedTuple):
@@ -62,8 +63,8 @@ class TrainerConfig(NamedTuple):
     buffer_capacity: int = config.buffer.buffer_capacity
 
     # Output
-    log_metric_path = config.log.log_metric_path
-    log_checkpoint_path = config.log.log_checkpoint_path
+    log_metric_path: str = config.log.log_metric_path
+    log_checkpoint_path: str = config.log.log_checkpoint_path
 
 
 PyTree = Any
