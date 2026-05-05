@@ -3,7 +3,7 @@ import jax
 from jax import numpy as jnp
 from typing import Any, Tuple, Dict
 from functools import partial
-import tensorflow as tf
+from tensorboardX import SummaryWriter
 import datetime
 import orbax.checkpoint as ocp
 from tqdm.auto import tqdm
@@ -26,12 +26,12 @@ class AgentTrainer():
         self.t_target_sync = 0
         self.agent = agent
 
-        # Create tf.summary
+        # Create Summary writer
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         train_log_dir = self.cfg.log_metric_path + '/' + current_time + '/train'
         reward_log_dir = self.cfg.log_metric_path + '/' + current_time + '/reward'
-        self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        self.reward_summary_writer = tf.summary.create_file_writer(reward_log_dir)
+        self.train_summary_writer = SummaryWriter(train_log_dir)
+        self.reward_summary_writer = SummaryWriter(reward_log_dir)
 
         # Create the checkpoint manager
         ckp_options = ocp.CheckpointManagerOptions(
@@ -89,8 +89,7 @@ class AgentTrainer():
             if episode % self.cfg.check_reward_every == 0:
                 full_episode_discounted_reward = self.play_full_episode(env, dqn_state)
                 print(f"Reward checking: Episode: {episode}, Total discounted reward: {full_episode_discounted_reward}")
-                with self.reward_summary_writer.as_default():
-                    tf.summary.scalar('reward', full_episode_discounted_reward, step=episode)
+                self.reward_summary_writer.add_scalar('reward', full_episode_discounted_reward, episode)
 
                 self.ckp_mngr.save(
                     episode, 
@@ -114,8 +113,7 @@ class AgentTrainer():
             )
             sample_batch = self.buffer.sample(buffer_state, indices)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
-            with self.train_summary_writer.as_default():
-                tf.summary.scalar('loss', metrics['loss'], step=dqn_state.step)
+            self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
 
         if self.t_target_sync == 0:
             new_target_params = jax.tree.map(lambda x: x.copy(), new_dqn_state.params)
