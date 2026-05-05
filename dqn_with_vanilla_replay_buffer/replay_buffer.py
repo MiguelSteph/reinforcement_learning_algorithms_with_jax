@@ -25,7 +25,7 @@ class ReplayBuffer:
         )
 
 
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0,), donate_argnames=('state',))
     def add(self, state: BufferState, transition: Transition) -> BufferState:
         """Insert one transition into the buffer (overwrites oldest if full)."""
         idx = state.cursor
