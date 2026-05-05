@@ -1,5 +1,6 @@
 import ml_collections
 
+
 def get_configs():
     data_config = ml_collections.ConfigDict(
         dict(

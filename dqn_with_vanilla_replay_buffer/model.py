@@ -1,6 +1,7 @@
 import flax.linen as nn
 from jax import numpy as jnp
 
+
 class QNetwork(nn.Module):
     action_size: int
     
@@ -17,7 +18,7 @@ class QNetwork(nn.Module):
         x = nn.relu(x)
 
         x = x.reshape(x.shape[0], -1)
-        
+
         x = nn.Dense(512)(x)
         x = nn.relu(x)
         x = nn.Dense(self.action_size)(x)

@@ -10,6 +10,7 @@ from tqdm.auto import tqdm
 from agent import Agent
 from dqn_types import TrainerConfig, BufferState, DQNState, Transition, TransitionBatch, PyTree
 from replay_buffer import ReplayBuffer
+from env_wrapper import CarRacingEnvWrapper
 
 class AgentTrainer():
     def __init__(
@@ -43,13 +44,11 @@ class AgentTrainer():
             options=ckp_options
         )
 
-
     def init(self) -> BufferState:
         buffer_state = self.buffer.init()
         return buffer_state
 
-
-    def play_full_episode(self, env: Any, dqn_state: DQNState) -> float:
+    def play_full_episode(self, env: CarRacingEnvWrapper, dqn_state: DQNState) -> float:
         rewards = []
         obs, _ = env.reset()
         for _ in range(self.cfg.max_t_per_episode):
@@ -66,11 +65,10 @@ class AgentTrainer():
             discounted_reward_sum = rewards[t] + self.cfg.gamma * discounted_reward_sum
         return discounted_reward_sum
 
-    
     def run_train_loop(
-        self, 
-        env: Any, 
-        dqn_state: DQNState, 
+        self,
+        env: CarRacingEnvWrapper,
+        dqn_state: DQNState,
     ) -> DQNState:
         buffer_state = self.init()
         for episode in tqdm(range(1, self.cfg.n_episodes + 1)):
@@ -101,7 +99,6 @@ class AgentTrainer():
                 )
         return dqn_state
 
-
     def step(self, dqn_state: DQNState, buffer_state: BufferState, transition: Transition) -> Tuple[DQNState, BufferState]:
         # Save transition in the replay buffer
         buffer_state = self.buffer.add(buffer_state, transition)
@@ -126,7 +123,6 @@ class AgentTrainer():
 
         return new_dqn_state, buffer_state
 
-
     @partial(jax.jit,
              static_argnums=(0,),
             )
@@ -140,7 +136,6 @@ class AgentTrainer():
         )
         new_state = dqn_state.apply_gradients(grads=grads)
         return new_state, {"loss": loss}
-
 
     def _loss(self,
               online_params: PyTree,

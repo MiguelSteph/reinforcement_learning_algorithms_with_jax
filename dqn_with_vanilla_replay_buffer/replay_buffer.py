@@ -11,7 +11,6 @@ class ReplayBuffer:
         self.capacity = capacity
         self.obs_dim  = obs_dim
 
-
     def init(self) -> BufferState:
         """Return an empty BufferState."""
         return BufferState(
@@ -23,7 +22,6 @@ class ReplayBuffer:
             cursor = jnp.int32(0),
             size = jnp.int32(0),
         )
-
 
     @partial(jax.jit, static_argnums=(0,), donate_argnames=('state',))
     def add(self, state: BufferState, transition: Transition) -> BufferState:
@@ -39,7 +37,6 @@ class ReplayBuffer:
             size = jnp.minimum(state.size + 1, self.capacity),
         )
 
-
     @partial(jax.jit, static_argnums=(0,))
     def sample(self, state: BufferState, indices: jnp.ndarray) -> TransitionBatch:
         """Retrieve transitions at the given indices."""
@@ -50,7 +47,6 @@ class ReplayBuffer:
             next_obs = state.next_obs[indices],
             done     = state.done[indices],
         )
-
 
     def is_ready(self, state: BufferState, min_size: int) -> bool:
         return int(state.size) >= min_size

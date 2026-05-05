@@ -17,7 +17,6 @@ class Agent():
         )
         self.epsilon = dqn_config.epsilon
 
-
     def init(
         self,
         rng_key: jax.Array,
@@ -36,7 +35,6 @@ class Agent():
             target_params = target_params,
         )
 
-
     @partial(jax.jit, static_argnums=(0,))
     def select_action(
         self,
@@ -49,7 +47,6 @@ class Agent():
         explore_key, uniform_key = jax.random.split(key)
         random_action = jax.random.randint(explore_key, shape=(), minval=0, maxval=q_values.shape[-1]).astype(jnp.int32)
         return jnp.where(jax.random.uniform(uniform_key) < self.epsilon, random_action, greedy_action)
-
 
     @partial(jax.jit, static_argnums=(0,))
     def select_greedy_action(

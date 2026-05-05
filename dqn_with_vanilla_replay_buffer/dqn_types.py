@@ -4,6 +4,7 @@ from jax import numpy as jnp
 from flax.training import train_state
 from configs import get_configs
 
+
 config = get_configs()
 
 class Transition(NamedTuple):
@@ -14,7 +15,6 @@ class Transition(NamedTuple):
     next_obs: jnp.ndarray
     done:     jnp.bool_
 
-
 class TransitionBatch(NamedTuple):
     """A batch of transitions returned by the replay buffer sample method."""
     obs:      jnp.ndarray  # (batch_size, *obs_dim)
@@ -22,7 +22,6 @@ class TransitionBatch(NamedTuple):
     reward:   jnp.ndarray  # (batch_size,)
     next_obs: jnp.ndarray  # (batch_size, *obs_dim)
     done:     jnp.ndarray  # (batch_size,)
-
 
 class BufferState(NamedTuple):
     """All mutable state carried by the buffer (fully JAX-compatible)."""
@@ -34,12 +33,10 @@ class BufferState(NamedTuple):
     cursor:     jnp.int32   # int32 — next write position
     size:       jnp.int32   # int32 — current valid entries
 
-
 class DQNConfig(NamedTuple):
     """Architecture settings for the DQN Network."""
     n_actions: int = config.data.n_actions
     epsilon: float = config.policy.epsilon
-
 
 class TrainerConfig(NamedTuple):
     """Hyperparameters and architecture settings for the DQN agent."""
@@ -65,9 +62,7 @@ class TrainerConfig(NamedTuple):
     log_metric_path: str = config.log.log_metric_path
     log_checkpoint_path: str = config.log.log_checkpoint_path
 
-
 PyTree = Any
 
 class DQNState(train_state.TrainState):
     target_params: PyTree
-    rng_key: jax.Array
