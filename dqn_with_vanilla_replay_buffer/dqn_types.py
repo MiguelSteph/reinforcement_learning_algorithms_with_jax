@@ -37,9 +37,8 @@ class BufferState(NamedTuple):
 
 class DQNConfig(NamedTuple):
     """Architecture settings for the DQN Network."""
-    dropout_rate: float = config.model.dropout_rate
     n_actions: int = config.data.n_actions
-    temperature: float = config.training.temperature
+    epsilon: float = config.policy.epsilon
 
 
 class TrainerConfig(NamedTuple):

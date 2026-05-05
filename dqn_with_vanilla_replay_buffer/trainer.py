@@ -54,7 +54,7 @@ class AgentTrainer():
         obs, _ = env.reset()
         for _ in range(self.cfg.max_t_per_episode):
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
-            action = self.agent.select_action(dqn_state, obs, sample_rng_key)
+            action = self.agent.select_greedy_action(dqn_state, obs)
             obs, reward, terminated, truncated, *_ = env.step(int(action))
             rewards.append(reward)
             done = terminated or truncated
@@ -131,15 +131,12 @@ class AgentTrainer():
              static_argnums=(0,),
             )
     def train_step(self, dqn_state: DQNState, batch: TransitionBatch) -> Tuple[DQNState, Dict]:
-        dropout_rng_key = jax.random.fold_in(key=dqn_state.rng_key, data=dqn_state.step)
-        
         # Compute loss and gradients
         loss, grads = jax.value_and_grad(self._loss)(
             dqn_state.params,
             dqn_state.target_params,
             dqn_state.apply_fn,
             batch,
-            dropout_rng_key=dropout_rng_key,
         )
         new_state = dqn_state.apply_gradients(grads=grads)
         return new_state, {"loss": loss}
@@ -149,17 +146,15 @@ class AgentTrainer():
               online_params: PyTree,
               target_params: PyTree,
               apply_fn: Any,
-              batch: TransitionBatch,
-              dropout_rng_key: jax.Array | None) -> PyTree:
+              batch: TransitionBatch) -> PyTree:
 
         def q_online(x):
             return apply_fn(
-                online_params, x, train=True,
-                rngs={'dropout': dropout_rng_key},
+                online_params, x
             )
 
         def q_target(x):
-            return apply_fn(target_params, x, train=False)
+            return apply_fn(target_params, x)
 
         with jax.named_scope("computing_q_values"):
             q_values = q_online(batch.obs) # (B, n_actions)

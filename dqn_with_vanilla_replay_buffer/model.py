@@ -2,21 +2,23 @@ import flax.linen as nn
 from jax import numpy as jnp
 
 class QNetwork(nn.Module):
-    dropout_rate: float
     action_size: int
     
     @nn.compact
-    def __call__(self, inputs: jnp.ndarray, train: bool = False) -> jnp.ndarray:
+    def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
         x = inputs.astype(jnp.float32) / 255.0
-        x = nn.Conv(features=32, kernel_size=(3, 3), strides=(2, 2))(x)
-        x = nn.LayerNorm()(x)
+        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4))(x)
         x = nn.relu(x)
- 
-        x = nn.Conv(features=64, kernel_size=(3, 3), strides=(2, 2))(x)
-        x = nn.LayerNorm()(x)
+
+        x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2))(x)
+        x = nn.relu(x)
+
+        x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1))(x)
         x = nn.relu(x)
 
         x = x.reshape(x.shape[0], -1)
-        x = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(x)
-        x = nn.Dense(self.action_size)(x) 
+        
+        x = nn.Dense(512)(x)
+        x = nn.relu(x)
+        x = nn.Dense(self.action_size)(x)
         return x
