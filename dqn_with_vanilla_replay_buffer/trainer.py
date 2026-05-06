@@ -117,7 +117,7 @@ class AgentTrainer():
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
             sample_batch = self.buffer.sample(buffer_state, sample_rng_key, self.cfg.batch_size)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
-            # self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
+            self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
 
         if self.t_target_sync == 0:
             new_target_params = jax.tree.map(lambda x: x.copy(), new_dqn_state.params)
