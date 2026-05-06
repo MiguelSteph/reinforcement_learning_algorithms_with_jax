@@ -24,21 +24,21 @@ def get_configs():
 
     buffer_config = ml_collections.ConfigDict(
         dict(
-            buffer_capacity = 50_000,
-            min_buffer_size = 5_000,
+            buffer_capacity = 10_000,
+            min_buffer_size = 500,
         )
     )
 
     training_config = ml_collections.ConfigDict(
         dict(
             learning_rate = 1e-4,
-            batch_size = 64,
+            batch_size = 32,
             gamma = 0.99,
             update_every = 4,
-            target_sync_freq = 2000,
-            n_episodes = 10_000,
-            max_t_per_episode = 1000,
-            check_reward_every = 10,
+            target_sync_freq = 100,
+            n_episodes = 5_000,
+            max_t_per_episode = 500,
+            check_reward_every = 50,
         )
     )
 
