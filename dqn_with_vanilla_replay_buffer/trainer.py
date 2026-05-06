@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from agent import Agent
 from dqn_types import TrainerConfig, BufferState, DQNState, Transition, TransitionBatch, PyTree
 from replay_buffer import ReplayBuffer
-from env_wrapper import CarRacingEnvWrapper
+from env_wrapper import EnvWrapper
 
 class AgentTrainer():
     def __init__(
@@ -48,7 +48,7 @@ class AgentTrainer():
         buffer_state = self.buffer.init()
         return buffer_state
 
-    def play_full_episode(self, env: CarRacingEnvWrapper, dqn_state: DQNState) -> float:
+    def play_full_episode(self, env: EnvWrapper, dqn_state: DQNState) -> float:
         rewards = []
         obs, _ = env.reset()
         for _ in range(self.cfg.max_t_per_episode):
@@ -67,7 +67,7 @@ class AgentTrainer():
 
     def run_train_loop(
         self,
-        env: CarRacingEnvWrapper,
+        env: EnvWrapper,
         dqn_state: DQNState,
     ) -> DQNState:
         buffer_state = self.init()

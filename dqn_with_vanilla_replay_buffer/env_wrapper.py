@@ -1,18 +1,16 @@
 import numpy as np
 import gymnasium as gym
-from gymnasium.wrappers import FrameStackObservation
+from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 
 
-class CarRacingEnvWrapper:
-    """Wraps CarRacing-v3 with frame stacking, returning (H, W, n_stack*C) uint8 observations."""
-
-    def __init__(self, n_stack: int = 4):
-        env = gym.make("CarRacing-v3", continuous=False)
+class EnvWrapper:
+    def __init__(self, env_id: str = "ALE/Breakout-v5", n_stack: int = 4):
+        env = gym.make(env_id)
+        env = AtariPreprocessing(env)
         self._env = FrameStackObservation(env, stack_size=n_stack)
 
     def _process_obs(self, obs) -> np.ndarray:
-        frames = np.array(obs) # (4, 96, 96, 3)
-        return frames.transpose(1, 2, 0, 3).reshape(96, 96, -1) # (96, 96, 12)
+        return np.array(obs).transpose(1, 2, 0)  # (4,84,84) → (84,84,4)
 
     def reset(self, seed: int | None = None):
         obs, info = self._env.reset(seed=seed)
