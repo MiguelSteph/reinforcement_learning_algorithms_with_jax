@@ -25,6 +25,7 @@ class AgentTrainer():
         self.t_update = 0
         self.t_target_sync = 0
         self.agent = agent
+        self.buffer_ready = False 
 
         # Create Summary writer
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -104,16 +105,17 @@ class AgentTrainer():
 
         self.t_update = (self.t_update + 1) % self.cfg.update_every
         self.t_target_sync = (self.t_target_sync + 1) % self.cfg.target_sync_freq
-        is_buffer_ready = self.buffer.is_ready(buffer_state, self.cfg.min_buffer_size)
+        if not self.buffer_ready:
+          self.buffer_ready = bool(self.buffer.is_ready(buffer_state, self.cfg.min_buffer_size))
         new_dqn_state = dqn_state
-        if self.t_update == 0 and is_buffer_ready:
+        if self.t_update == 0 and self.buffer_ready:
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
             indices = jax.random.choice(
                 sample_rng_key, int(buffer_state.size), shape=(self.cfg.batch_size,), replace=False
             )
             sample_batch = self.buffer.sample(buffer_state, indices)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
-            self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
+            # self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
 
         if self.t_target_sync == 0:
             new_target_params = jax.tree.map(lambda x: x.copy(), new_dqn_state.params)
