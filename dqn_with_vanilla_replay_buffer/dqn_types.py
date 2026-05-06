@@ -55,7 +55,6 @@ class TrainerConfig(NamedTuple):
     check_reward_every: int = config.training.check_reward_every
     
     # Replay buffer
-    min_buffer_size: int = config.buffer.min_buffer_size
     buffer_capacity: int = config.buffer.buffer_capacity
 
     # Output

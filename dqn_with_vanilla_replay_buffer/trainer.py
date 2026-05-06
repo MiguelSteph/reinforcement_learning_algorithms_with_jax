@@ -74,7 +74,8 @@ class AgentTrainer():
         buffer_state = self.init()
         for episode in tqdm(range(1, self.cfg.n_episodes + 1)):
             # Reset the environment
-            print(f"Episode {episode} started")
+            if episode % 50 == 0:
+                print(f"Episode {episode} started")
             obs, _ = env.reset()
             for _ in range(self.cfg.max_t_per_episode):
                 self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
@@ -106,14 +107,9 @@ class AgentTrainer():
         self.t_update = (self.t_update + 1) % self.cfg.update_every
         self.t_target_sync = (self.t_target_sync + 1) % self.cfg.target_sync_freq
         if not self.buffer_ready:
-          self.buffer_ready = bool(self.buffer.is_ready(buffer_state, self.cfg.min_buffer_size))
+          self.buffer_ready = bool(self.buffer.is_ready(buffer_state, self.cfg.buffer_capacity))
         new_dqn_state = dqn_state
         if self.t_update == 0 and self.buffer_ready:
-            # self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
-            # indices = jax.random.choice(
-            #     sample_rng_key, int(buffer_state.size), shape=(self.cfg.batch_size,), replace=False
-            # )
-            # sample_batch = self.buffer.sample(buffer_state, indices)
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
             sample_batch = self.buffer.sample(buffer_state, sample_rng_key, self.cfg.batch_size)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)

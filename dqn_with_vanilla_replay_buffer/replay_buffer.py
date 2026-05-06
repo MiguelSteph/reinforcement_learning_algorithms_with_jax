@@ -51,16 +51,5 @@ class ReplayBuffer:
             done     = state.done[indices],
         )
 
-    # @partial(jax.jit, static_argnums=(0,))
-    # def sample(self, state: BufferState, indices: jnp.ndarray) -> TransitionBatch:
-    #     """Retrieve transitions at the given indices."""
-    #     return TransitionBatch(
-    #         obs      = state.obs[indices],
-    #         action   = state.action[indices],
-    #         reward   = state.reward[indices],
-    #         next_obs = state.next_obs[indices],
-    #         done     = state.done[indices],
-    #     )
-
     def is_ready(self, state: BufferState, min_size: int) -> bool:
         return int(state.size) >= min_size
