@@ -37,7 +37,7 @@ class ReplayBuffer:
             size = jnp.minimum(state.size + 1, self.capacity),
         )
 
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0,3))
     def sample(self, state: BufferState, key: jax.Array, batch_size: int) -> TransitionBatch:
         """Retrieve transitions at the given indices."""
         indices = jax.random.choice(
