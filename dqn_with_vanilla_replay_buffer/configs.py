@@ -24,8 +24,8 @@ def get_configs():
 
     buffer_config = ml_collections.ConfigDict(
         dict(
-            buffer_capacity = 10_000,
-            min_buffer_size = 500,
+            buffer_capacity = 5000,
+            min_buffer_size = 5000,
         )
     )
 

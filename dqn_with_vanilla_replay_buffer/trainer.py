@@ -109,11 +109,13 @@ class AgentTrainer():
           self.buffer_ready = bool(self.buffer.is_ready(buffer_state, self.cfg.min_buffer_size))
         new_dqn_state = dqn_state
         if self.t_update == 0 and self.buffer_ready:
+            # self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
+            # indices = jax.random.choice(
+            #     sample_rng_key, int(buffer_state.size), shape=(self.cfg.batch_size,), replace=False
+            # )
+            # sample_batch = self.buffer.sample(buffer_state, indices)
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
-            indices = jax.random.choice(
-                sample_rng_key, int(buffer_state.size), shape=(self.cfg.batch_size,), replace=False
-            )
-            sample_batch = self.buffer.sample(buffer_state, indices)
+            sample_batch = self.buffer.sample(buffer_state, sample_rng_key, trainer_config.batch_size)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
             # self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
 
