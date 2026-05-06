@@ -1,6 +1,9 @@
 import numpy as np
 import gymnasium as gym
+import ale_py
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
+
+gym.register_envs(ale_py)
 
 
 class EnvWrapper:
