@@ -163,4 +163,6 @@ class AgentTrainer():
             # Stop gradient through the target
             td_target = jax.lax.stop_gradient(td_target)
 
-        return jnp.mean((q_taken - td_target) ** 2)
+        error = q_taken - td_target
+        return jnp.mean(jnp.where(jnp.abs(error) <= 1.0, 0.5 * error ** 2, jnp.abs(error) - 0.5))
+        # return jnp.mean((q_taken - td_target) ** 2)

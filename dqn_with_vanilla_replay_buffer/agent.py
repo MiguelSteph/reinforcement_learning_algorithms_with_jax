@@ -31,7 +31,10 @@ class Agent():
         return DQNState.create(
             apply_fn = self.network.apply,
             params = online_params,
-            tx = optax.adam(learning_rate),
+            tx = optax.chain(
+              optax.clip_by_global_norm(10.0),
+              optax.adam(learning_rate),
+            ),
             target_params = target_params,
         )
 
