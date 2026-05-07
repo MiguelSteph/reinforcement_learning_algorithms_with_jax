@@ -24,7 +24,7 @@ def get_configs():
 
     buffer_config = ml_collections.ConfigDict(
         dict(
-            buffer_capacity = 20000,
+            buffer_capacity = 50000,
         )
     )
 
@@ -34,8 +34,8 @@ def get_configs():
             batch_size = 64,
             gamma = 0.99,
             update_every = 4,
-            target_sync_freq = 100,
-            n_episodes = 10000,
+            target_sync_freq = 1000,
+            n_episodes = 20000,
             max_t_per_episode = 1000,
             check_reward_every = 100,
         )
