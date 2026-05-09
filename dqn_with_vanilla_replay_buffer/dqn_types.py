@@ -36,14 +36,18 @@ class BufferState(NamedTuple):
 class DQNConfig(NamedTuple):
     """Architecture settings for the DQN Network."""
     n_actions: int = config.data.n_actions
-    epsilon: float = config.policy.epsilon
 
 class TrainerConfig(NamedTuple):
     """Hyperparameters and architecture settings for the DQN agent."""
     # Environment
     obs_shape: tuple[int, int, int] = config.data.obs_shape
     n_actions: int = config.data.n_actions
- 
+
+    # Exploration
+    epsilon_start:       float = config.policy.epsilon_start
+    epsilon_end:         float = config.policy.epsilon_end
+    epsilon_decay_steps: int   = config.policy.epsilon_decay_steps
+
     # Training
     learning_rate: float = config.training.learning_rate
     gamma: float = config.training.gamma
@@ -53,7 +57,7 @@ class TrainerConfig(NamedTuple):
     n_episodes: int = config.training.n_episodes
     max_t_per_episode: int = config.training.max_t_per_episode
     check_reward_every: int = config.training.check_reward_every
-    
+
     # Replay buffer
     buffer_capacity: int = config.buffer.buffer_capacity
 

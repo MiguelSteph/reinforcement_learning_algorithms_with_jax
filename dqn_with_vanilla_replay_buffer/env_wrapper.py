@@ -7,9 +7,9 @@ gym.register_envs(ale_py)
 
 
 class EnvWrapper:
-    def __init__(self, env_id: str = "ALE/Breakout-v5", n_stack: int = 4):
+    def __init__(self, env_id: str = "ALE/Breakout-v5", n_stack: int = 4, terminal_on_life_loss: bool = True):
         env = gym.make(env_id, frameskip=1)
-        env = AtariPreprocessing(env, terminal_on_life_loss=True)
+        env = AtariPreprocessing(env, terminal_on_life_loss=terminal_on_life_loss)
         self._env = FrameStackObservation(env, stack_size=n_stack)
 
     def _process_obs(self, obs) -> np.ndarray:

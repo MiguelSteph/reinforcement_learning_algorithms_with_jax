@@ -25,7 +25,8 @@ class AgentTrainer():
         self.t_update = 0
         self.t_target_sync = 0
         self.agent = agent
-        self.buffer_ready = False 
+        self.buffer_ready = False
+        self._total_steps = 0
 
         # Create Summary writer
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -44,6 +45,10 @@ class AgentTrainer():
             os.path.abspath(self.cfg.log_checkpoint_path),
             options=ckp_options
         )
+
+    def _get_epsilon(self) -> float:
+        progress = min(self._total_steps / self.cfg.epsilon_decay_steps, 1.0)
+        return self.cfg.epsilon_end + (self.cfg.epsilon_start - self.cfg.epsilon_end) * (1.0 - progress)
 
     def init(self) -> BufferState:
         buffer_state = self.buffer.init()
@@ -69,33 +74,35 @@ class AgentTrainer():
     def run_train_loop(
         self,
         env: EnvWrapper,
+        eval_env: EnvWrapper,
         dqn_state: DQNState,
     ) -> DQNState:
         buffer_state = self.init()
         for episode in tqdm(range(1, self.cfg.n_episodes + 1)):
-            # Reset the environment
             if episode % 50 == 0:
                 print(f"Episode {episode} started")
             obs, _ = env.reset()
             for _ in range(self.cfg.max_t_per_episode):
                 self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
-                action = self.agent.select_action(dqn_state, obs, sample_rng_key)
+                epsilon = self._get_epsilon()
+                action = self.agent.select_action(dqn_state, obs, sample_rng_key, epsilon)
                 next_obs, reward, terminated, truncated, *_ = env.step(int(action))
                 done = terminated or truncated
                 transition = Transition(obs, action, reward, next_obs, done)
                 dqn_state, buffer_state = self.step(dqn_state, buffer_state, transition)
                 obs = next_obs
+                self._total_steps += 1
                 if done:
                     break
 
             if episode % self.cfg.check_reward_every == 0:
-                full_episode_discounted_reward = self.play_full_episode(env, dqn_state)
-                print(f"Reward checking: Episode: {episode}, Total discounted reward: {full_episode_discounted_reward}")
+                full_episode_discounted_reward = self.play_full_episode(eval_env, dqn_state)
+                print(f"Reward checking: Episode: {episode}, Epsilon: {epsilon:.3f}, Total discounted reward: {full_episode_discounted_reward}")
                 self.reward_summary_writer.add_scalar('reward', full_episode_discounted_reward, episode)
 
                 self.ckp_mngr.save(
-                    episode, 
-                    args=ocp.args.StandardSave(dqn_state), 
+                    episode,
+                    args=ocp.args.StandardSave(dqn_state),
                     metrics={'reward': full_episode_discounted_reward,}
                 )
         return dqn_state
