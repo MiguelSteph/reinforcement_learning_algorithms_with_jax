@@ -115,8 +115,11 @@ class AgentTrainer():
         self.t_target_sync = (self.t_target_sync + 1) % self.cfg.target_sync_freq
         if not self.buffer_ready:
           self.buffer_ready = bool(self.buffer.is_ready(buffer_state, self.cfg.buffer_capacity))
+          if self.buffer_ready:
+            print("TRAINING STARTS")
         new_dqn_state = dqn_state
-        if self.t_update == 0 and self.buffer_ready:
+        if self.buffer_ready:
+        # if self.t_update == 0 and self.buffer_ready:
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
             sample_batch = self.buffer.sample(buffer_state, sample_rng_key, self.cfg.batch_size)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)

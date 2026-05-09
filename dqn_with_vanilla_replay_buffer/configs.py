@@ -12,7 +12,7 @@ def get_configs():
     policy_config = ml_collections.ConfigDict(
         dict(
             epsilon_start       = 1.0,
-            epsilon_end         = 0.05,
+            epsilon_end         = 0.01,
             epsilon_decay_steps = 200_000,
         )
     )

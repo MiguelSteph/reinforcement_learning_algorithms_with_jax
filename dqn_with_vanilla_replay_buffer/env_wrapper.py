@@ -17,10 +17,6 @@ class EnvWrapper:
 
     def reset(self, seed: int | None = None):
         obs, info = self._env.reset(seed=seed)
-        # After reset, we should play the Fire action.
-        obs, _, terminated, truncated, info = self._env.step(1)
-        if terminated or truncated:
-          return self.reset()
         return self._process_obs(obs), info
 
     def step(self, action: int):
