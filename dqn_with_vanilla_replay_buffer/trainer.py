@@ -67,14 +67,15 @@ class AgentTrainer():
                 break
 
         discounted_reward_sum = 0
+        reward_sum = 0
         for t in range(len(rewards) - 1, -1, -1):
+            reward_sum = reward_sum + rewards[t]
             discounted_reward_sum = rewards[t] + self.cfg.gamma * discounted_reward_sum
-        return discounted_reward_sum
+        return discounted_reward_sum, reward_sum
 
     def run_train_loop(
         self,
         env: EnvWrapper,
-        eval_env: EnvWrapper,
         dqn_state: DQNState,
     ) -> DQNState:
         buffer_state = self.init()
@@ -96,8 +97,8 @@ class AgentTrainer():
                     break
 
             if episode % self.cfg.check_reward_every == 0:
-                full_episode_discounted_reward = self.play_full_episode(eval_env, dqn_state)
-                print(f"Reward checking: Episode: {episode}, Epsilon: {epsilon:.3f}, Total discounted reward: {full_episode_discounted_reward}")
+                full_episode_discounted_reward, reward_sum = self.play_full_episode(env, dqn_state)
+                print(f"Reward checking: Episode: {episode}, Train step: {self._total_steps},  Epsilon: {epsilon:.3f}, Total discounted reward: {full_episode_discounted_reward}, Total undiscounted reward: {reward_sum}")
                 self.reward_summary_writer.add_scalar('reward', full_episode_discounted_reward, episode)
 
                 self.ckp_mngr.save(

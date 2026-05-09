@@ -17,6 +17,10 @@ class EnvWrapper:
 
     def reset(self, seed: int | None = None):
         obs, info = self._env.reset(seed=seed)
+        obs, _, terminated, truncated, info = self._env.step(1)  # FIRE
+        if terminated or truncated:
+          obs, info = self._env.reset(seed=seed)
+          obs, _, _, _, info = self._env.step(1)
         return self._process_obs(obs), info
 
     def step(self, action: int):
