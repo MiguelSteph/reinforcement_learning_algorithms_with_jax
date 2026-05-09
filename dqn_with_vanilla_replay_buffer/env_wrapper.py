@@ -9,7 +9,7 @@ gym.register_envs(ale_py)
 class EnvWrapper:
     def __init__(self, env_id: str = "ALE/Breakout-v5", n_stack: int = 4):
         env = gym.make(env_id, frameskip=1)
-        env = AtariPreprocessing(env)
+        env = AtariPreprocessing(env, terminal_on_life_loss=True)
         self._env = FrameStackObservation(env, stack_size=n_stack)
 
     def _process_obs(self, obs) -> np.ndarray:
@@ -17,6 +17,10 @@ class EnvWrapper:
 
     def reset(self, seed: int | None = None):
         obs, info = self._env.reset(seed=seed)
+        # After reset, we should play the Fire action.
+        obs, _, terminated, truncated, info = self._env.step(1)
+        if terminated or truncated:
+          return self.reset()
         return self._process_obs(obs), info
 
     def step(self, action: int):
