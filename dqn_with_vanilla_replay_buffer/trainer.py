@@ -92,7 +92,6 @@ class AgentTrainer():
                 transition = Transition(obs, action, reward, next_obs, done)
                 dqn_state, buffer_state = self.step(dqn_state, buffer_state, transition)
                 obs = next_obs
-                self._total_steps += 1
                 if done:
                     break
 
@@ -106,6 +105,8 @@ class AgentTrainer():
                     args=ocp.args.StandardSave(dqn_state),
                     metrics={'reward': full_episode_discounted_reward,}
                 )
+            if self._total_steps == 2_000_000:
+                break
         return dqn_state
 
     def step(self, dqn_state: DQNState, buffer_state: BufferState, transition: Transition) -> Tuple[DQNState, BufferState]:
@@ -119,8 +120,8 @@ class AgentTrainer():
           if self.buffer_ready:
             print("TRAINING STARTS")
         new_dqn_state = dqn_state
-        if self.buffer_ready:
-        # if self.t_update == 0 and self.buffer_ready:
+        if self.t_update == 0 and self.buffer_ready:
+            self._total_steps += 1
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
             sample_batch = self.buffer.sample(buffer_state, sample_rng_key, self.cfg.batch_size)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
