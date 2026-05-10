@@ -89,7 +89,7 @@ class AgentTrainer():
                 action = self.agent.select_action(dqn_state, obs, sample_rng_key, epsilon)
                 next_obs, reward, terminated, truncated, *_ = env.step(int(action))
                 done = terminated or truncated
-                transition = Transition(obs, action, reward, next_obs, done)
+                transition = Transition(obs, action, float(np.sign(reward)), next_obs, done)
                 dqn_state, buffer_state = self.step(dqn_state, buffer_state, transition)
                 obs = next_obs
                 if done:
@@ -105,8 +105,9 @@ class AgentTrainer():
                     args=ocp.args.StandardSave(dqn_state),
                     metrics={'reward': full_episode_discounted_reward,}
                 )
-            if self._total_steps == 2_000_000:
+            if self._total_steps >= 2_000_000:
                 break
+        self.ckp_mngr.wait_until_finished()
         return dqn_state
 
     def step(self, dqn_state: DQNState, buffer_state: BufferState, transition: Transition) -> Tuple[DQNState, BufferState]:

@@ -12,8 +12,8 @@ def get_configs():
     policy_config = ml_collections.ConfigDict(
         dict(
             epsilon_start       = 1.0,
-            epsilon_end         = 0.01,
-            epsilon_decay_steps = 150_000,
+            epsilon_end         = 0.05,
+            epsilon_decay_steps = 1_000_000,
         )
     )
             
@@ -32,7 +32,7 @@ def get_configs():
 
     training_config = ml_collections.ConfigDict(
         dict(
-            learning_rate = 1e-4,
+            learning_rate = 0.00025,
             batch_size = 64,
             gamma = 0.99,
             update_every = 4,
