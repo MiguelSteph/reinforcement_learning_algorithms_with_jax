@@ -37,7 +37,7 @@ def get_configs():
             gamma = 0.99,
             update_every = 4,
             target_sync_freq = 1000,
-            n_episodes = 50000,
+            n_episodes = 5_000_0000,
             max_t_per_episode = 2000,
             check_reward_every = 100,
         )
