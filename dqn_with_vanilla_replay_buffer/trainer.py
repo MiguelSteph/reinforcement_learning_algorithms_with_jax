@@ -1,5 +1,6 @@
 import os
 import jax
+import numpy as np
 from jax import numpy as jnp
 from typing import Any, Tuple, Dict
 from functools import partial
