@@ -32,13 +32,13 @@ def get_configs():
 
     training_config = ml_collections.ConfigDict(
         dict(
-            learning_rate = 0.00025,
+            learning_rate = 1e-4,
             batch_size = 64,
             gamma = 0.99,
             update_every = 4,
             target_sync_freq = 1000,
             n_episodes = 5_000_0000,
-            max_t_per_episode = 2000,
+            max_t_per_episode = 5000,
             check_reward_every = 100,
         )
     )

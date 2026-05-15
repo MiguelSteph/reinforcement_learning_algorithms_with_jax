@@ -107,7 +107,7 @@ class AgentTrainer():
                     metrics={'reward': full_episode_discounted_reward,}
                 )
 
-            if self._total_steps > 2_000_000:
+            if self._total_steps > 2_500_000:
                 break
 
         self.ckp_mngr.wait_until_finished()
