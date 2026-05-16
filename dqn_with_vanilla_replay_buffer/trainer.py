@@ -38,8 +38,8 @@ class AgentTrainer():
 
         # Create the checkpoint manager
         ckp_options = ocp.CheckpointManagerOptions(
-            max_to_keep = 1, 
-            best_fn = lambda metrics: metrics['reward'],
+            max_to_keep = 3, 
+            best_fn = lambda metrics: metrics['sum_rewards'],
             best_mode = 'max'
         )
         self.ckp_mngr = ocp.CheckpointManager(
@@ -55,7 +55,7 @@ class AgentTrainer():
         buffer_state = self.buffer.init()
         return buffer_state
 
-    def play_full_episode(self, env: EnvWrapper, dqn_state: DQNState) -> float:
+    def play_full_episode(self, env: EnvWrapper, dqn_state: DQNState) -> Tuple[float, float]:
         rewards = []
         obs, _ = env.reset()
         for _ in range(self.cfg.max_t_per_episode):
@@ -99,15 +99,16 @@ class AgentTrainer():
             if episode % self.cfg.check_reward_every == 0:
                 full_episode_discounted_reward, reward_sum = self.play_full_episode(env, dqn_state)
                 print(f"Reward checking: Episode: {episode}, Train step: {self._total_steps},  Epsilon: {epsilon:.3f}, Total discounted reward: {full_episode_discounted_reward}, Total undiscounted reward: {reward_sum}")
-                self.reward_summary_writer.add_scalar('reward', full_episode_discounted_reward, episode)
+                self.reward_summary_writer.add_scalar('discounted_rewards', full_episode_discounted_reward, episode)
+                self.reward_summary_writer.add_scalar('sum_rewards', reward_sum, episode)
 
                 self.ckp_mngr.save(
                     episode,
                     args=ocp.args.StandardSave(dqn_state),
-                    metrics={'reward': full_episode_discounted_reward,}
+                    metrics={'sum_rewards': reward_sum,}
                 )
 
-            if self._total_steps > 2_500_000:
+            if self._total_steps > 3_000_000:
                 break
 
         self.ckp_mngr.wait_until_finished()
@@ -118,22 +119,22 @@ class AgentTrainer():
         buffer_state = self.buffer.add(buffer_state, transition)
 
         self.t_update = (self.t_update + 1) % self.cfg.update_every
-        self.t_target_sync = (self.t_target_sync + 1) % self.cfg.target_sync_freq
         if not self.buffer_ready:
           self.buffer_ready = bool(self.buffer.is_ready(buffer_state, self.cfg.buffer_capacity))
           if self.buffer_ready:
             print("TRAINING STARTS")
         new_dqn_state = dqn_state
         if self.t_update == 0 and self.buffer_ready:
+            self.t_target_sync = (self.t_target_sync + 1) % self.cfg.target_sync_freq
             self._total_steps += 1
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
             sample_batch = self.buffer.sample(buffer_state, sample_rng_key, self.cfg.batch_size)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
             self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
 
-        if self.t_target_sync == 0:
-            new_target_params = jax.tree.map(lambda x: x.copy(), new_dqn_state.params)
-            new_dqn_state = new_dqn_state.replace(target_params=new_target_params)
+            if self.t_target_sync == 0:
+                new_target_params = jax.tree.map(lambda x: x.copy(), new_dqn_state.params)
+                new_dqn_state = new_dqn_state.replace(target_params=new_target_params)
 
         return new_dqn_state, buffer_state
 

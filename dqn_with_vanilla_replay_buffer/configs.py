@@ -13,7 +13,7 @@ def get_configs():
         dict(
             epsilon_start       = 1.0,
             epsilon_end         = 0.05,
-            epsilon_decay_steps = 1_000_000,
+            epsilon_decay_steps = 100_000,
         )
     )
             
@@ -26,7 +26,7 @@ def get_configs():
 
     buffer_config = ml_collections.ConfigDict(
         dict(
-            buffer_capacity = 100000,
+            buffer_capacity = 1_000_000,
         )
     )
 
@@ -36,8 +36,8 @@ def get_configs():
             batch_size = 64,
             gamma = 0.99,
             update_every = 4,
-            target_sync_freq = 1000,
-            n_episodes = 5_000_0000,
+            target_sync_freq = 8000,
+            n_episodes = 10_000_0000,
             max_t_per_episode = 5000,
             check_reward_every = 100,
         )
