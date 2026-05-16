@@ -22,8 +22,8 @@ class ReplayBuffer:
             reward   = np.zeros((self.capacity,), dtype=np.float32),
             next_obs = np.zeros((self.capacity, *self.obs_dim), dtype=np.uint8),
             done     = np.zeros((self.capacity,), dtype=np.bool_),
-            cursor   = np.array(0, dtype=np.int32),
-            size     = np.array(0, dtype=np.int32),
+            cursor   = 0,
+            size     = 0,
         )
 
     def add(self, state: BufferState, transition: Transition) -> BufferState:
@@ -33,9 +33,10 @@ class ReplayBuffer:
         state.reward[idx] = transition.reward
         state.next_obs[idx] = transition.next_obs
         state.done[idx] = transition.done
-        state.cursor = (idx + 1) % self.capacity
-        state.size = min(int(state.size) + 1, self.capacity)
-        return state
+        return state._replace(
+            cursor=(idx + 1) % self.capacity,
+            size=min(state.size + 1, self.capacity),
+        )
 
     def sample(self, state: BufferState, key: jax.Array, batch_size: int) -> TransitionBatch:
         indices = np.array(jax.random.choice(key, self.capacity, shape=(batch_size,), replace=False))
