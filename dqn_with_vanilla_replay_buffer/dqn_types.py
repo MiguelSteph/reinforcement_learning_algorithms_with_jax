@@ -57,6 +57,7 @@ class TrainerConfig(NamedTuple):
     n_episodes: int = config.training.n_episodes
     max_t_per_episode: int = config.training.max_t_per_episode
     check_reward_every: int = config.training.check_reward_every
+    max_total_gradient_steps: int = config.training.max_total_gradient_steps
 
     # Replay buffer
     buffer_capacity: int = config.buffer.buffer_capacity

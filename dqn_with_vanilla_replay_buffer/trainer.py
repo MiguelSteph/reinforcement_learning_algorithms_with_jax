@@ -108,7 +108,7 @@ class AgentTrainer():
                     metrics={'sum_rewards': reward_sum,}
                 )
 
-            if self._total_steps > 2_500_000:
+            if self._total_steps > self.cfg.max_total_gradient_steps:
                 break
 
         self.ckp_mngr.wait_until_finished()
