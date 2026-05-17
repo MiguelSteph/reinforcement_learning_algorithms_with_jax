@@ -22,7 +22,7 @@ class AgentTrainer():
     ):
         self.cfg = trainer_config
         self.rng_key, buffer_rng_key = jax.random.split(initial_rng_key, 2)
-        buffer_seed = int(jax.random.randint(buffer_rng_key, shape=(), minval=0, maxval=2**31))
+        buffer_seed = int(jax.random.randint(buffer_rng_key, shape=(), minval=0, maxval=2**31 - 1))
         self.buffer = ReplayBuffer(self.cfg.buffer_capacity, self.cfg.obs_shape, seed=buffer_seed)
         self.t_update = 0
         self.t_target_sync = 0
