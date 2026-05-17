@@ -23,15 +23,6 @@ class TransitionBatch(NamedTuple):
     next_obs: jnp.ndarray  # (batch_size, *obs_dim)
     done:     jnp.ndarray  # (batch_size,)
 
-class BufferState(NamedTuple):
-    """All mutable state carried by the buffer (fully JAX-compatible)."""
-    obs:        jnp.ndarray   # (capacity, *obs_dim) uint8
-    action:     jnp.ndarray   # (capacity,)
-    reward:     jnp.ndarray   # (capacity,)
-    next_obs:   jnp.ndarray   # (capacity, *obs_dim) uint8
-    done:       jnp.ndarray   # (capacity,)
-    cursor:     jnp.int32   # int32 — next write position
-    size:       jnp.int32   # int32 — current valid entries
 
 class DQNConfig(NamedTuple):
     """Architecture settings for the DQN Network."""

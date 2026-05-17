@@ -1,55 +1,41 @@
+import numpy as np
 import jax
 from jax import numpy as jnp
-from functools import partial
-from dqn_types import BufferState, Transition, TransitionBatch
+from dqn_types import Transition, TransitionBatch
 
 
 class ReplayBuffer:
-    """Fixed size replay buffer to store experiences."""
+    """Fixed-size replay buffer backed by NumPy arrays."""
 
-    def __init__(self, capacity: int, obs_dim: list[int]):
+    def __init__(self, capacity: int, obs_dim: list[int], seed: int = 0):
         self.capacity = capacity
-        self.obs_dim  = obs_dim
+        self.obs = np.zeros((capacity, *obs_dim), dtype=np.uint8)
+        self.action = np.zeros((capacity,), dtype=np.int32)
+        self.reward = np.zeros((capacity,), dtype=np.float32)
+        self.next_obs = np.zeros((capacity, *obs_dim), dtype=np.uint8)
+        self.done = np.zeros((capacity,), dtype=np.bool_)
+        self.cursor = 0
+        self.size = 0
+        self._rng = np.random.default_rng(seed)
 
-    def init(self) -> BufferState:
-        """Return an empty BufferState."""
-        return BufferState(
-            obs = jnp.zeros((self.capacity, *self.obs_dim), dtype = jnp.uint8),
-            action = jnp.zeros((self.capacity,), dtype =jnp.int32),
-            reward = jnp.zeros((self.capacity,), dtype = jnp.float32),
-            next_obs = jnp.zeros((self.capacity, *self.obs_dim), dtype = jnp.uint8),
-            done = jnp.zeros((self.capacity,), dtype = jnp.bool_),
-            cursor = jnp.int32(0),
-            size = jnp.int32(0),
-        )
+    def add(self, transition: Transition) -> None:
+        self.obs[self.cursor] = transition.obs
+        self.action[self.cursor] = transition.action
+        self.reward[self.cursor] = transition.reward
+        self.next_obs[self.cursor] = transition.next_obs
+        self.done[self.cursor] = transition.done
+        self.cursor = (self.cursor + 1) % self.capacity
+        self.size = min(self.size + 1, self.capacity)
 
-    @partial(jax.jit, static_argnums=(0,), donate_argnames=('state',))
-    def add(self, state: BufferState, transition: Transition) -> BufferState:
-        """Insert one transition into the buffer (overwrites oldest if full)."""
-        idx = state.cursor
-        return BufferState(
-            obs = state.obs.at[idx].set(transition.obs),
-            action = state.action.at[idx].set(transition.action),
-            reward = state.reward.at[idx].set(transition.reward),
-            next_obs = state.next_obs.at[idx].set(transition.next_obs),
-            done = state.done.at[idx].set(transition.done),
-            cursor = (idx + 1) % self.capacity,
-            size = jnp.minimum(state.size + 1, self.capacity),
-        )
-
-    @partial(jax.jit, static_argnums=(0,3))
-    def sample(self, state: BufferState, key: jax.Array, batch_size: int) -> TransitionBatch:
-        """Retrieve transitions at the given indices."""
-        indices = jax.random.choice(
-            key, self.capacity, shape=(batch_size,), replace=False
-        )
+    def sample(self, batch_size: int) -> TransitionBatch:
+        indices = self._rng.choice(self.size, size=batch_size, replace=False)
         return TransitionBatch(
-            obs      = state.obs[indices],
-            action   = state.action[indices],
-            reward   = state.reward[indices],
-            next_obs = state.next_obs[indices],
-            done     = state.done[indices],
+            obs = jnp.array(self.obs[indices]),
+            action = jnp.array(self.action[indices]),
+            reward = jnp.array(self.reward[indices]),
+            next_obs = jnp.array(self.next_obs[indices]),
+            done = jnp.array(self.done[indices]),
         )
 
-    def is_ready(self, state: BufferState, min_size: int) -> bool:
-        return int(state.size) >= min_size
+    def is_ready(self, min_size: int) -> bool:
+        return self.size >= min_size

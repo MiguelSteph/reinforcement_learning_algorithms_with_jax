@@ -9,7 +9,7 @@ import datetime
 import orbax.checkpoint as ocp
 from tqdm.auto import tqdm
 from agent import Agent
-from dqn_types import TrainerConfig, BufferState, DQNState, Transition, TransitionBatch, PyTree
+from dqn_types import TrainerConfig, DQNState, Transition, TransitionBatch, PyTree
 from replay_buffer import ReplayBuffer
 from env_wrapper import EnvWrapper
 
@@ -21,8 +21,9 @@ class AgentTrainer():
         initial_rng_key: jax.Array
     ):
         self.cfg = trainer_config
-        self.rng_key = initial_rng_key
-        self.buffer = ReplayBuffer(self.cfg.buffer_capacity, self.cfg.obs_shape)
+        self.rng_key, buffer_rng_key = jax.random.split(initial_rng_key, 2)
+        buffer_seed = int(jax.random.randint(buffer_rng_key, shape=(), minval=0, maxval=2**31))
+        self.buffer = ReplayBuffer(self.cfg.buffer_capacity, self.cfg.obs_shape, seed=buffer_seed)
         self.t_update = 0
         self.t_target_sync = 0
         self.agent = agent
@@ -51,10 +52,6 @@ class AgentTrainer():
         progress = min(self._total_steps / self.cfg.epsilon_decay_steps, 1.0)
         return self.cfg.epsilon_end + (self.cfg.epsilon_start - self.cfg.epsilon_end) * (1.0 - progress)
 
-    def init(self) -> BufferState:
-        buffer_state = self.buffer.init()
-        return buffer_state
-
     def play_full_episode(self, env: EnvWrapper, dqn_state: DQNState) -> Tuple[float, float]:
         rewards = []
         obs, _ = env.reset()
@@ -79,7 +76,6 @@ class AgentTrainer():
         env: EnvWrapper,
         dqn_state: DQNState,
     ) -> DQNState:
-        buffer_state = self.init()
         for episode in tqdm(range(1, self.cfg.n_episodes + 1)):
             if episode % 50 == 0:
                 print(f"Episode {episode} started")
@@ -91,7 +87,7 @@ class AgentTrainer():
                 next_obs, reward, terminated, truncated, *_ = env.step(int(action))
                 done = terminated or truncated
                 transition = Transition(obs, action, float(np.sign(reward)), next_obs, done)
-                dqn_state, buffer_state = self.step(dqn_state, buffer_state, transition)
+                dqn_state = self.step(dqn_state, transition)
                 obs = next_obs
                 if done:
                     break
@@ -114,21 +110,19 @@ class AgentTrainer():
         self.ckp_mngr.wait_until_finished()
         return dqn_state
 
-    def step(self, dqn_state: DQNState, buffer_state: BufferState, transition: Transition) -> Tuple[DQNState, BufferState]:
-        # Save transition in the replay buffer
-        buffer_state = self.buffer.add(buffer_state, transition)
+    def step(self, dqn_state: DQNState, transition: Transition) -> DQNState:
+        self.buffer.add(transition)
 
         self.t_update = (self.t_update + 1) % self.cfg.update_every
         if not self.buffer_ready:
-          self.buffer_ready = bool(self.buffer.is_ready(buffer_state, self.cfg.buffer_capacity))
-          if self.buffer_ready:
-            print("TRAINING STARTS")
+            self.buffer_ready = self.buffer.is_ready(self.cfg.buffer_capacity)
+            if self.buffer_ready:
+                print("TRAINING STARTS")
         new_dqn_state = dqn_state
         if self.t_update == 0 and self.buffer_ready:
             self.t_target_sync = (self.t_target_sync + 1) % self.cfg.target_sync_freq
             self._total_steps += 1
-            self.rng_key, sample_rng_key = jax.random.split(self.rng_key, 2)
-            sample_batch = self.buffer.sample(buffer_state, sample_rng_key, self.cfg.batch_size)
+            sample_batch = self.buffer.sample(self.cfg.batch_size)
             new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
             self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
 
@@ -136,7 +130,7 @@ class AgentTrainer():
                 new_target_params = jax.tree.map(lambda x: x.copy(), new_dqn_state.params)
                 new_dqn_state = new_dqn_state.replace(target_params=new_target_params)
 
-        return new_dqn_state, buffer_state
+        return new_dqn_state
 
     @partial(jax.jit,
              static_argnums=(0,),
