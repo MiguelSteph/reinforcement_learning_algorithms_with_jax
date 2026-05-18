@@ -17,6 +17,7 @@ class EnvWrapper:
         if video_folder is not None:
             env = RecordVideo(env, video_folder=video_folder, episode_trigger=lambda ep: True)
         self._env = FrameStackObservation(env, stack_size=n_stack)
+        self._terminal_on_life_loss = terminal_on_life_loss
 
     def _process_obs(self, obs) -> np.ndarray:
         return np.array(obs).transpose(1, 2, 0)  # (4,84,84) → (84,84,4)
@@ -31,7 +32,7 @@ class EnvWrapper:
 
     def step(self, action: int):
         obs, reward, terminated, truncated, info = self._env.step(action)
-        if info.get('lives', 0) < self._lives and not (terminated or truncated):
+        if not self._terminal_on_life_loss and info.get('lives', 0) < self._lives and not (terminated or truncated):
             obs, _, terminated, truncated, info = self._env.step(1)  # FIRE after life loss
         return self._process_obs(obs), reward, terminated, truncated, info
 
