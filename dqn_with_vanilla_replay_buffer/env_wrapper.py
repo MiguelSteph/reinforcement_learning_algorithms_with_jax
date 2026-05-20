@@ -9,7 +9,7 @@ gym.register_envs(ale_py)
 class EnvWrapper:
     def __init__(self, 
                  env_id: str = "ALE/Breakout-v5", 
-                 n_stack: int = 4, 
+                 n_stack: int = 6, 
                  terminal_on_life_loss: bool = True,
                  video_folder: str|None = None):
         env = gym.make(env_id, frameskip=1, render_mode="rgb_array")
