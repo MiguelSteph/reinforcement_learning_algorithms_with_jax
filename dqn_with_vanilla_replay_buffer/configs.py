@@ -4,7 +4,7 @@ import ml_collections
 def get_configs():
     data_config = ml_collections.ConfigDict(
         dict(
-            obs_shape = (84, 84, 6),
+            obs_shape = (84, 84, 4),
             n_actions = 4,
         )
     )
