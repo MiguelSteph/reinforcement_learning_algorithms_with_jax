@@ -40,7 +40,7 @@ def get_configs():
             n_episodes = 10_000_0000,
             max_t_per_episode = 10000,
             check_reward_every = 100,
-            max_total_gradient_steps = 2_500_000,
+            max_total_gradient_steps = 3_000_000,
         )
     )
 
