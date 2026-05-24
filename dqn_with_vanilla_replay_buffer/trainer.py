@@ -95,7 +95,7 @@ class AgentTrainer():
             if episode % self.cfg.check_reward_every == 0:
                 discounted_rewards = []
                 reward_sums = []
-                for _ in range(num_episodes_eval):
+                for _ in range(self.cfg.num_episodes_eval):
                     discounted_r, r_sum = self.play_full_episode(env, dqn_state)
                     discounted_rewards.append(discounted_r)
                     reward_sums.append(r_sum)
