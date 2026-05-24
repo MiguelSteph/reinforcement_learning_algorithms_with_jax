@@ -92,7 +92,7 @@ class AgentTrainer():
                 if done:
                     break
 
-            if episode % self.cfg.check_reward_every == 0:
+            if self.buffer_ready and episode % self.cfg.check_reward_every == 0:
                 discounted_rewards = []
                 reward_sums = []
                 for _ in range(self.cfg.num_episodes_eval):

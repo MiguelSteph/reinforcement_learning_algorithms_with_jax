@@ -39,7 +39,7 @@ def get_configs():
             target_sync_freq = 8000,
             n_episodes = 10_000_0000,
             max_t_per_episode = 10000,
-            check_reward_every = 100,
+            check_reward_every = 200,
             max_total_gradient_steps = 2_500_000,
             num_episodes_eval = 20,
         )
