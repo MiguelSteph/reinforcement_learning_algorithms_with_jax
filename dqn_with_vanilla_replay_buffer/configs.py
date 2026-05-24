@@ -33,6 +33,8 @@ def get_configs():
     training_config = ml_collections.ConfigDict(
         dict(
             learning_rate = 1e-4,
+            warm_up_steps = 1_000_000,
+            decay_steps = 2_500_000,
             batch_size = 64,
             gamma = 0.99,
             update_every = 4,

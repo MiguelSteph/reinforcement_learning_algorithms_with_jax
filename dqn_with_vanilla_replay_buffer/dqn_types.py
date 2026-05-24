@@ -41,6 +41,8 @@ class TrainerConfig(NamedTuple):
 
     # Training
     learning_rate: float = config.training.learning_rate
+    warm_up_steps: int = config.training.warm_up_steps
+    decay_steps: int = config.training.decay_steps
     gamma: float = config.training.gamma
     batch_size: int = config.training.batch_size
     target_sync_freq: int = config.training.target_sync_freq

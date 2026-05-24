@@ -21,19 +21,42 @@ class Agent():
         rng_key: jax.Array,
         obs_shape: Tuple[int, int, int],
         learning_rate: float,
+        warm_up_steps: int,
+        decay_steps: int,
     ) -> DQNState:
         """Initialise network parameters and optimizer state."""
+        def create_learning_rate_scheduler(base_lr: jnp.float32,
+                                        warmup_epochs: int,
+                                        cosine_epochs: int) -> Any:
+            warmup_fn = optax.linear_schedule(init_value=0, end_value=base_lr,
+                                            transition_steps=warmup_epochs)
+            cosine_fn = optax.cosine_decay_schedule(init_value=base_lr,
+                                                    decay_steps=cosine_epochs)
+            schedule_fn = optax.join_schedules(schedules=[warmup_fn, cosine_fn],
+                                            boundaries=[warmup_epochs])
+            return schedule_fn
+
         dummy_obs = jnp.zeros((1, *obs_shape), dtype=jnp.float32)
         online_params = self.network.init(rng_key, dummy_obs)
         target_params = jax.tree.map(lambda x: x.copy(), online_params)
 
+        scheduler = create_learning_rate_scheduler(learning_rate,
+                                                    warm_up_steps,
+                                                    decay_steps)
+
+        # return DQNState.create(
+        #     apply_fn = self.network.apply,
+        #     params = online_params,
+        #     tx = optax.chain(
+        #       optax.clip_by_global_norm(10.0),
+        #       optax.adam(scheduler),
+        #     ),
+        #     target_params = target_params,
+        # )
         return DQNState.create(
             apply_fn = self.network.apply,
             params = online_params,
-            tx = optax.chain(
-              optax.clip_by_global_norm(10.0),
-              optax.adam(learning_rate),
-            ),
+            tx = optax.adam(scheduler),
             target_params = target_params,
         )
 
