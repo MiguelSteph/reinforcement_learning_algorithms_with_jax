@@ -1,6 +1,6 @@
 import jax
 from jax import numpy as jnp
-from typing import Tuple
+from typing import Tuple, Any
 from functools import partial
 import optax
 from dqn_types import DQNConfig, DQNState
