@@ -93,8 +93,15 @@ class AgentTrainer():
                     break
 
             if episode % self.cfg.check_reward_every == 0:
-                full_episode_discounted_reward, reward_sum = self.play_full_episode(env, dqn_state)
-                print(f"Reward checking: Episode: {episode}, Train step: {self._total_steps},  Epsilon: {epsilon:.3f}, Total discounted reward: {full_episode_discounted_reward}, Total undiscounted reward: {reward_sum}")
+                discounted_rewards = []
+                reward_sums = []
+                for _ in range(num_episodes_eval):
+                    discounted_r, r_sum = self.play_full_episode(env, dqn_state)
+                    discounted_rewards.append(discounted_r)
+                    reward_sums.append(r_sum)
+                full_episode_discounted_reward = sum(discounted_rewards) / len(discounted_rewards)
+                reward_sum = sum(reward_sums) / len(reward_sums)
+                print(f"Reward checking: Episode: {episode}, Train step: {self._total_steps},  Epsilon: {epsilon:.3f}, Avg discounted reward: {full_episode_discounted_reward}, Avg undiscounted reward: {reward_sum}")
                 self.reward_summary_writer.add_scalar('discounted_rewards', full_episode_discounted_reward, episode)
                 self.reward_summary_writer.add_scalar('sum_rewards', reward_sum, episode)
 
@@ -123,7 +130,7 @@ class AgentTrainer():
             self.t_target_sync = (self.t_target_sync + 1) % self.cfg.target_sync_freq
             self._total_steps += 1
             sample_batch = self.buffer.sample(self.cfg.batch_size)
-            new_dqn_state, metrics = self.train_step(dqn_state, sample_batch)
+            new_dqn_state, metrics = self.train_step(new_dqn_state, sample_batch)
             self.train_summary_writer.add_scalar('loss', float(metrics['loss']), int(dqn_state.step))
 
             if self.t_target_sync == 0:
@@ -174,6 +181,6 @@ class AgentTrainer():
             # Stop gradient through the target
             td_target = jax.lax.stop_gradient(td_target)
 
-        # error = q_taken - td_target
-        # return jnp.mean(jnp.where(jnp.abs(error) <= 1.0, 0.5 * error ** 2, jnp.abs(error) - 0.5))
-        return jnp.mean((q_taken - td_target) ** 2)
+        error = q_taken - td_target
+        return jnp.mean(jnp.where(jnp.abs(error) <= 1.0, 0.5 * error ** 2, jnp.abs(error) - 0.5))
+        # return jnp.mean((q_taken - td_target) ** 2)

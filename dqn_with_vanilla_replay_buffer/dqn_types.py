@@ -41,8 +41,6 @@ class TrainerConfig(NamedTuple):
 
     # Training
     learning_rate: float = config.training.learning_rate
-    warm_up_steps: int = config.training.warm_up_steps
-    decay_steps: int = config.training.decay_steps
     gamma: float = config.training.gamma
     batch_size: int = config.training.batch_size
     target_sync_freq: int = config.training.target_sync_freq
@@ -51,6 +49,7 @@ class TrainerConfig(NamedTuple):
     max_t_per_episode: int = config.training.max_t_per_episode
     check_reward_every: int = config.training.check_reward_every
     max_total_gradient_steps: int = config.training.max_total_gradient_steps
+    num_episodes_eval: int = config.training.num_episodes_eval
 
     # Replay buffer
     buffer_capacity: int = config.buffer.buffer_capacity

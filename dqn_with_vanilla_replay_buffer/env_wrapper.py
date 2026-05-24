@@ -34,6 +34,7 @@ class EnvWrapper:
         obs, reward, terminated, truncated, info = self._env.step(action)
         if not self._terminal_on_life_loss and info.get('lives', 0) < self._lives and not (terminated or truncated):
             obs, _, terminated, truncated, info = self._env.step(1)  # FIRE after life loss
+        self._lives = info.get('lives', 0)
         return self._process_obs(obs), reward, terminated, truncated, info
 
     def close(self):

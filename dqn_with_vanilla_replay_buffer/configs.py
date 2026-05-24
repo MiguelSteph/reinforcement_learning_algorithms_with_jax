@@ -13,7 +13,7 @@ def get_configs():
         dict(
             epsilon_start       = 1.0,
             epsilon_end         = 0.05,
-            epsilon_decay_steps = 100_000,
+            epsilon_decay_steps = 200_000,
         )
     )
             
@@ -33,16 +33,15 @@ def get_configs():
     training_config = ml_collections.ConfigDict(
         dict(
             learning_rate = 1e-4,
-            warm_up_steps = 1_000_000,
-            decay_steps = 2_500_000,
             batch_size = 64,
             gamma = 0.99,
             update_every = 4,
-            target_sync_freq = 10000,
+            target_sync_freq = 8000,
             n_episodes = 10_000_0000,
             max_t_per_episode = 10000,
             check_reward_every = 100,
-            max_total_gradient_steps = 3_000_000,
+            max_total_gradient_steps = 2_500_000,
+            num_episodes_eval = 20,
         )
     )
 
