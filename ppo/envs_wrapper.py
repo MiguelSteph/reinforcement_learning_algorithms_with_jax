@@ -5,6 +5,17 @@ from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation, Record
 
 gym.register_envs(ale_py)
 
+
+class FireOnResetWrapper(gym.Wrapper):
+    """Sends FIRE (action 1) on every reset so the ball is always in play."""
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        obs, _, terminated, truncated, info = self.env.step(1)
+        if terminated or truncated:
+            obs, info = self.reset(**kwargs)
+        return obs, info
+
+
 class EnvsWrapper:
     def __init__(self,
                  env_id: str = "ALE/Breakout-v5",
@@ -15,6 +26,7 @@ class EnvsWrapper:
             def create_new_env():
                 env = gym.make(env_id, frameskip=1, render_mode="rgb_array")
                 env = AtariPreprocessing(env, terminal_on_life_loss=terminal_on_life_loss)
+                env = FireOnResetWrapper(env)
                 return FrameStackObservation(env, stack_size=n_stack)
             return create_new_env
 
@@ -30,9 +42,7 @@ class EnvsWrapper:
 
     def reset_envs(self, seed: int | None = None):
         obs, info = self._envs.reset(seed=seed)
-        fire_actions = np.ones((self._num_envs,), dtype=np.int32)
-        obs, _, _, _, info = self.step_envs(fire_actions)  # FIRE
-        return obs, info
+        return self._process_obs(obs), info
 
     def step_envs(self, actions: list[int]):
         obs, rewards, terminated, truncated, info = self._envs.step(actions)
