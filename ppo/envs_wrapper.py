@@ -7,13 +7,23 @@ gym.register_envs(ale_py)
 
 
 class FireOnResetWrapper(gym.Wrapper):
-    """Sends FIRE (action 1) on every reset so the ball is always in play."""
+    """Sends FIRE on every reset and after life loss when terminal_on_life_loss=False."""
+
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         obs, _, terminated, truncated, info = self.env.step(1)
         if terminated or truncated:
             obs, info = self.reset(**kwargs)
+        self._lives = info.get('lives', 0)
         return obs, info
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        current_lives = info.get('lives', 0)
+        if current_lives < self._lives and not (terminated or truncated):
+            obs, _, terminated, truncated, info = self.env.step(1)  # FIRE after life loss
+        self._lives = current_lives
+        return obs, reward, terminated, truncated, info
 
 
 class EnvsWrapper:
@@ -21,17 +31,20 @@ class EnvsWrapper:
                  env_id: str = "ALE/Breakout-v5",
                  num_envs: int = 8,
                  n_stack: int = 4,
-                 terminal_on_life_loss: bool = True):
-        def make_env():
+                 terminal_on_life_loss: bool = True,
+                 video_folder: str | None = None):
+        def make_env(env_index):
             def create_new_env():
                 env = gym.make(env_id, frameskip=1, render_mode="rgb_array")
                 env = AtariPreprocessing(env, terminal_on_life_loss=terminal_on_life_loss)
                 env = FireOnResetWrapper(env)
+                if video_folder is not None and env_index == 0:
+                    env = RecordVideo(env, video_folder=video_folder, episode_trigger=lambda ep: True)
                 return FrameStackObservation(env, stack_size=n_stack)
             return create_new_env
 
         self._envs = gym.vector.AsyncVectorEnv(
-                [make_env() for i in range(num_envs)],
+                [make_env(i) for i in range(num_envs)],
             )
 
         self._num_envs = num_envs

@@ -80,6 +80,9 @@ class AgentTrainer():
                 print(f"Evaluation: Rollout: {num_rollout}, Avg rewards sum: {avg_rewards_sum}")
 
         self.ckp_mngr.wait_until_finished()
+        self.envs_wrapper.close()
+        self.eval_envs_wrapper.close()
+        
         return state
 
     @partial(jax.jit,
