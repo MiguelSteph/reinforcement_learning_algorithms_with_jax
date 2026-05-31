@@ -51,10 +51,11 @@ class AgentTrainer():
         )
 
     def run_train_loop(self, state: train_state.TrainState) -> train_state.TrainState:
+        obs, _ = self.envs_wrapper.reset_envs()
         for num_rollout in tqdm(range(1, self.cfg.num_rollouts + 1)):
             if num_rollout % 50 == 0:
                 print(f"Rollout {num_rollout} started")
-            transitions = self._collect_env_transitions(state)
+            obs, transitions = self._collect_env_transitions(state, obs)
             train_samples = self._get_train_samples(transitions)
             for epoch in range(self.cfg.num_epochs_per_rollout):
                 batch_samples = self._get_batch_train_samples(train_samples)
@@ -77,7 +78,6 @@ class AgentTrainer():
                     metrics={'avg_rewards_sum': float(avg_rewards_sum),}
                 )
                 print(f"Evaluation: Rollout: {num_rollout}, Avg rewards sum: {avg_rewards_sum}")
-                
 
         self.ckp_mngr.wait_until_finished()
         return state
@@ -114,23 +114,19 @@ class AgentTrainer():
         return pg_loss + self.cfg.vf_coef * value_loss - self.cfg.ent_coef * entropy_loss
 
     def run_eval(self, state: train_state.TrainState) -> np.float32:
-        rewards_arr = np.zeros((self.cfg.steps_per_env, self.cfg.eval_num_envs), dtype=np.float32)
-        done_arr = np.zeros((self.cfg.steps_per_env, self.cfg.eval_num_envs), dtype=np.float32)
         obs, _ = self.eval_envs_wrapper.reset_envs()
-        # Collect the env steps
-        for t in range(self.cfg.steps_per_env):
-            log_probs, values = self.agent.run_policy(state, jnp.array(obs))
+        episode_rewards = np.zeros(self.cfg.eval_num_envs, dtype=np.float32)
+        episode_done = np.zeros(self.cfg.eval_num_envs, dtype=bool)
+
+        while not np.all(episode_done):
+            log_probs, _ = self.agent.run_policy(state, jnp.array(obs))
             actions = self.agent.select_greedy_actions(log_probs)
             actions = jax.device_get(actions)
-            next_obs, rewards, terminated, truncated, _ = self.eval_envs_wrapper.step_envs(actions)
+            obs, rewards, terminated, truncated, _ = self.eval_envs_wrapper.step_envs(actions)
 
-            done = terminated | truncated
-            rewards_arr[t] = rewards
-            done_arr[t] = done
-            obs = next_obs
-        valid_rewards = rewards_arr * (1 - done_arr)
-        rewards_sum = np.sum(valid_rewards, axis=0)
-        return np.mean(rewards_sum)
+            episode_rewards += rewards * (1 - episode_done)
+            episode_done |= (terminated | truncated)
+        return np.mean(episode_rewards)
 
     def _get_batch_train_samples(self, train_samples: TrainSamples) -> list[BatchSamples]:
         num_samples = self.cfg.steps_per_env * self.cfg.num_envs
@@ -173,9 +169,8 @@ class AgentTrainer():
             index = end
         return train_samples
 
-    def _collect_env_transitions(self, state: train_state.TrainState) -> list[EnvsTransition]:
+    def _collect_env_transitions(self, state: train_state.TrainState, obs: np.ndarray) -> tuple[np.ndarray, list[EnvsTransition]]:
         transitions = []
-        obs, _ = self.envs_wrapper.reset_envs()
         # Collect the env steps
         for _ in range(self.cfg.steps_per_env + 1):
             self.rng_key, sample_rng_key = jax.random.split(self.rng_key)
@@ -213,4 +208,4 @@ class AgentTrainer():
                 transition.advantages = advantages
             
             transition.returns = transition.advantages + values
-        return transitions
+        return obs, transitions
