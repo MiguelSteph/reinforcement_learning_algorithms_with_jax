@@ -28,8 +28,8 @@ class AgentTrainer():
         train_data_seed = int(jax.random.randint(data_rng_key, shape=(), minval=0, maxval=2**31 - 1))
         self._rng = np.random.default_rng(train_data_seed)
         self.agent = agent
-        self.envs_wrapper = EnvsWrapper()
-        self.eval_envs_wrapper = EnvsWrapper(num_envs=self.cfg.eval_num_envs)
+        self.envs_wrapper = EnvsWrapper(terminal_on_life_loss=False)
+        self.eval_envs_wrapper = EnvsWrapper(num_envs=self.cfg.eval_num_envs, terminal_on_life_loss=False)
         self._total_steps = 0
 
         # Create Summary writer
@@ -122,7 +122,7 @@ class AgentTrainer():
         episode_done = np.zeros(self.cfg.eval_num_envs, dtype=bool)
         step = 0
 
-        while not np.all(episode_done) and step < 2_000:
+        while not np.all(episode_done) and step < 10_000:
             log_probs, _ = self.agent.run_policy(state, jnp.array(obs))
             actions = self.agent.select_greedy_actions(log_probs)
             actions = jax.device_get(actions)
