@@ -32,9 +32,9 @@ class Agent():
             apply_fn = self.network.apply,
             params = params,
             tx = optax.chain(
-              optax.clip_by_global_norm(10.0),
-              optax.adam(learning_rate),
-            ),
+                optax.clip_by_global_norm(0.5),
+                optax.adam(learning_rate, eps=1e-5),
+            )
         )
 
     @partial(jax.jit, static_argnums=(0,))

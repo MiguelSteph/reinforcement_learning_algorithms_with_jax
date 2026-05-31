@@ -119,7 +119,7 @@ class AgentTrainer():
         episode_done = np.zeros(self.cfg.eval_num_envs, dtype=bool)
         step = 0
 
-        while not np.all(episode_done) and step < 1_000:
+        while not np.all(episode_done) and step < 2_000:
             log_probs, _ = self.agent.run_policy(state, jnp.array(obs))
             actions = self.agent.select_greedy_actions(log_probs)
             actions = jax.device_get(actions)
