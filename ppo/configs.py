@@ -18,8 +18,8 @@ def get_configs():
 
     training_config = ml_collections.ConfigDict(
         dict(
-            learning_rate = 1e-4,
-            batch_size = 64,
+            learning_rate = 2.5e-4,
+            batch_size = 256,
             gamma = 0.99,
             gae_lambda = 0.95,
             clip_coef = 0.1,
@@ -28,8 +28,8 @@ def get_configs():
             steps_per_env = 128,
             ent_coef = 0.01,
             vf_coef = 0.5,
-            num_rollouts = 50, # 2_000_000
-            rollouts_per_eval = 10, # 50
+            num_rollouts = 2_000 # 10_000
+            rollouts_per_eval = 20, # Run eval every 20 rollouts
             num_epochs_per_rollout = 4,
         )
     )

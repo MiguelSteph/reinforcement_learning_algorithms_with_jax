@@ -2,6 +2,7 @@ import os
 import jax
 import numpy as np
 from jax import numpy as jnp
+from flax.training import train_state
 from typing import Any, Tuple, Dict
 from functools import partial
 from tensorboardX import SummaryWriter
@@ -9,7 +10,7 @@ import datetime
 import orbax.checkpoint as ocp
 from tqdm.auto import tqdm
 from dataclasses import dataclass
-from ppo_types import TrainerConfig, BatchSamples
+from ppo_types import EnvsTransition, PyTree, TrainerConfig, TrainSamples, BatchSamples
 from agent import Agent
 from envs_wrapper import EnvsWrapper
 
@@ -52,7 +53,7 @@ class AgentTrainer():
     def run_train_loop(self, state: train_state.TrainState) -> train_state.TrainState:
         for num_rollout in tqdm(range(1, self.cfg.num_rollouts + 1)):
             if num_rollout % 50 == 0:
-                print(f"Rollout {num_rollout + 1} started")
+                print(f"Rollout {num_rollout} started")
             transitions = self._collect_env_transitions(state)
             train_samples = self._get_train_samples(transitions)
             for epoch in range(self.cfg.num_epochs_per_rollout):
@@ -103,13 +104,14 @@ class AgentTrainer():
 
         entropy_loss = jnp.sum(-probs * log_probs, axis=-1).mean()
 
+        advantages = (batch.advantages - batch.advantages.mean()) / (batch.advantages.std() + 1e-8)
         log_probs_act_taken = log_probs[jnp.arange(log_probs.shape[0]), batch.actions.astype(jnp.int32)]
         ratios = jnp.exp(log_probs_act_taken - batch.old_log_probs)
-        pg_loss_1 = ratios * batch.advantages
-        pg_loss_2 = jnp.clip(ratios, 1 - self.cfg.clip_coef, 1 + self.cfg.clip_coef) * batch.advantages
+        pg_loss_1 = ratios * advantages
+        pg_loss_2 = jnp.clip(ratios, 1 - self.cfg.clip_coef, 1 + self.cfg.clip_coef) * advantages
         pg_loss = -jnp.minimum(pg_loss_1, pg_loss_2).mean()
 
-        return pg_loss + self.cfg.vf_coef * value_loss + self.cfg.ent_coef * entropy_loss
+        return pg_loss + self.cfg.vf_coef * value_loss - self.cfg.ent_coef * entropy_loss
 
     def run_eval(self, state: train_state.TrainState) -> np.float32:
         rewards_arr = np.zeros((self.cfg.steps_per_env, self.cfg.eval_num_envs), dtype=np.float32)
@@ -117,7 +119,6 @@ class AgentTrainer():
         obs, _ = self.eval_envs_wrapper.reset_envs()
         # Collect the env steps
         for t in range(self.cfg.steps_per_env):
-            self.rng_key, sample_rng_key = jax.random.split(self.rng_key)
             log_probs, values = self.agent.run_policy(state, jnp.array(obs))
             actions = self.agent.select_greedy_actions(log_probs)
             actions = jax.device_get(actions)
@@ -128,7 +129,7 @@ class AgentTrainer():
             done_arr[t] = done
             obs = next_obs
         valid_rewards = rewards_arr * (1 - done_arr)
-        rewards_sum = np.sum(valid_rewards, axis=1)
+        rewards_sum = np.sum(valid_rewards, axis=0)
         return np.mean(rewards_sum)
 
     def _get_batch_train_samples(self, train_samples: TrainSamples) -> list[BatchSamples]:
@@ -152,7 +153,7 @@ class AgentTrainer():
     def _get_train_samples(self, transitions: list[EnvsTransition]) -> TrainSamples:
         num_samples = self.cfg.steps_per_env * self.cfg.num_envs
         train_samples = TrainSamples(
-            obs=np.zeros((num_samples,) + config.data.obs_shape, dtype=np.float32),
+            obs=np.zeros((num_samples,) + self.cfg.obs_shape, dtype=np.float32),
             actions=np.zeros((num_samples,), dtype=np.float32),
             old_log_probs=np.zeros((num_samples,), dtype=np.float32),
             advantages=np.zeros((num_samples,), dtype=np.float32),
@@ -187,7 +188,7 @@ class AgentTrainer():
             transition = EnvsTransition(
                 obs=obs,
                 actions=actions,
-                rewards=rewards,
+                rewards=np.sign(rewards),
                 terminated=terminated,
                 truncated=truncated,
                 log_probs=log_probs,
@@ -202,14 +203,14 @@ class AgentTrainer():
             done = transition.terminated | transition.truncated
             values = transition.values[:, 0]
             next_values = transitions[t+1].values[:, 0]
-            next_values = next_values * (1 - done)
-            returns = transition.rewards + self.cfg.gamma * next_values
-            td_error = returns - values
+            next_values = next_values * (1 - done)            
+            td_error = transition.rewards + self.cfg.gamma * next_values - values
 
-            transition.returns = returns
             if t == self.cfg.steps_per_env-1:
                 transition.advantages = td_error
             else:
-                advantages = td_error + self.cfg.gamma * self.cfg.gae_lambda * transitions[t+1].advantages
+                advantages = td_error + self.cfg.gamma * self.cfg.gae_lambda * transitions[t+1].advantages * (1 - done)
                 transition.advantages = advantages
+            
+            transition.returns = transition.advantages + values
         return transitions

@@ -2,6 +2,10 @@ import jax
 import numpy as np
 from typing import Any, NamedTuple
 from dataclasses import dataclass
+from configs import get_configs
+
+
+config = get_configs()
 
 PyTree = Any
 
@@ -39,7 +43,6 @@ class TrainerConfig(NamedTuple):
     """Hyperparameters and architecture settings for the DQN agent."""
     # Environment
     obs_shape: tuple[int, int, int] = config.data.obs_shape
-    n_actions: int = config.data.n_actions
 
     # Training
     learning_rate: float = config.training.learning_rate
@@ -50,8 +53,8 @@ class TrainerConfig(NamedTuple):
     num_envs: int = config.training.num_envs
     eval_num_envs: int = config.training.eval_num_envs
     steps_per_env: int = config.training.steps_per_env
-    ent_coef: int = config.training.ent_coef
-    vf_coef: int = config.training.vf_coef
+    ent_coef: float = config.training.ent_coef
+    vf_coef: float = config.training.vf_coef
     num_rollouts: int = config.training.num_rollouts
     rollouts_per_eval: int = config.training.rollouts_per_eval
     num_epochs_per_rollout: int = config.training.num_epochs_per_rollout
