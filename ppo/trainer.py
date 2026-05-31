@@ -117,8 +117,9 @@ class AgentTrainer():
         obs, _ = self.eval_envs_wrapper.reset_envs()
         episode_rewards = np.zeros(self.cfg.eval_num_envs, dtype=np.float32)
         episode_done = np.zeros(self.cfg.eval_num_envs, dtype=bool)
+        step = 0
 
-        while not np.all(episode_done):
+        while not np.all(episode_done) and step < 1_000:
             log_probs, _ = self.agent.run_policy(state, jnp.array(obs))
             actions = self.agent.select_greedy_actions(log_probs)
             actions = jax.device_get(actions)
@@ -126,6 +127,7 @@ class AgentTrainer():
 
             episode_rewards += rewards * (1 - episode_done)
             episode_done |= (terminated | truncated)
+            step += 1
         return np.mean(episode_rewards)
 
     def _get_batch_train_samples(self, train_samples: TrainSamples) -> list[BatchSamples]:
