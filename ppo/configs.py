@@ -28,8 +28,8 @@ def get_configs():
             steps_per_env = 128,
             ent_coef = 0.01,
             vf_coef = 0.5,
-            num_rollouts = 2_000, # 10_000
-            rollouts_per_eval = 20, # Run eval every 20 rollouts
+            num_rollouts = 10_000,
+            rollouts_per_eval = 50, # Run eval every 50 rollouts
             num_epochs_per_rollout = 4,
         )
     )
