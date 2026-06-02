@@ -29,7 +29,7 @@ class Agent():
         params = self.network.init(rng_key, dummy_obs)
 
         lr_schedule = optax.linear_schedule(
-            init_value=2.5e-4,
+            init_value=learning_rate,
             end_value=0.0,
             transition_steps=170_000,
         )
