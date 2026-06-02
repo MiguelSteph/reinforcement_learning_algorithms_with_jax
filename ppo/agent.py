@@ -28,12 +28,17 @@ class Agent():
         dummy_obs = jnp.zeros((1, *obs_shape), dtype=jnp.float32)
         params = self.network.init(rng_key, dummy_obs)
 
+        lr_schedule = optax.linear_schedule(
+            init_value=2.5e-4,
+            end_value=0.0,
+            transition_steps=170_000,
+        )
         return train_state.TrainState.create(
             apply_fn = self.network.apply,
             params = params,
             tx = optax.chain(
-                optax.clip_by_global_norm(5.0),
-                optax.adam(learning_rate),
+                optax.clip_by_global_norm(0.5),
+                optax.adam(lr_schedule, eps=1e-5),
             )
         )
 
